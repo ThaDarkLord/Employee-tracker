@@ -12,26 +12,27 @@ const db = mysql.createConnection(
   console.log(`Connected to the recruiter_db database.`)
 );
 
+
 const startQuestion = [
   {
     type: 'list',
     name: 'answer',
     message: 'What would you like to do?',
-    choices: ['View All Employees', 'Add Employee', 'Update Employee Role', 'View All Roles', 'Add Role', 'View All Departments', 'Add Departments']
-  },
-]
+    choices: ['View All Employees', 'Add Employee', 'Update Employee Role', 'View All Roles', 'Add Role', 'View All Departments', 'Add Departments', 'Quit']
+  }]
 
-inquirer.prompt(startQuestion)
+function getAnswers(){ 
+return inquirer.prompt(startQuestion)
   .then((data) => {
-
-    console.log(data);
     // view all employees
     if (data.answer === 'View All Employees') {
       db.query(`SELECT * FROM employee`, (err, results) => {
         if (err) {
           console.log(err)
+         
         } else {
           console.table(results)
+          getAnswers()
         }
       })
     }
@@ -53,16 +54,15 @@ inquirer.prompt(startQuestion)
           },
           {
             name: 'roleId',
-            type: 'list',
+            type: 'input',
             message: 'What is the employees role ?',
-            choices: [{name:'Sales Lead', value: 1},{name:'Lead Engineer', value: 2}, {name:'Account Manager', value: 3}, {name: 'Legal Team Lead', value: 4}]
-
+            
           },
           {
             name: 'managerId',
             type: 'list',
             message: 'What is the employee mananger id?',
-            choices: [{name: 'Chad Brunswick', value: 1},{name:'Brett Brunswick', value: 2}]
+            choices: [{name: 'Chad Brunswick', value: 1},{name:'Brett Brunswick', value: 2}, {name:'no manager assigned', value: 3}]
           }
         ]).then((promptData) => {
           let userInput1 = promptData.firstname;
@@ -74,6 +74,7 @@ inquirer.prompt(startQuestion)
               console.log(err)
             } else {
               console.log('Employee successfully added');
+              getAnswers()
             }
           })
         })
@@ -83,26 +84,43 @@ inquirer.prompt(startQuestion)
     else if( data.answer === 'Update Employee Role'){
       inquirer.prompt([
         {
-          name: 'title',
-          message: 'What is the new title of the employee?',
-          type: 'list',
-          choices: [{name: 'Sales Lead', value: 1}, {name: 'Engineering Lead', value: 2}, {name: 'Financial Lead', value: 3},{name: 'Legality Lead', value: 4},{name: 'Sales team member', value: 5}, {name: 'Engineering team member', value: 6}, {name: 'Financial team member', value: 7}, {name: 'Legality team member', value: 8}]
+          name: 'employeeID',
+          message: 'What is the employee id of the employee you would like to update?',
+          type: 'input'
         },
         {
-          name: 'salary',
-          message: 'What is the salary for this role?',
-          type: 'list',
-          choices: ['80000', '90000', '100000', '150000', '250000']
-
+          name: 'first',
+          message: 'What is the employees first name?',
+          type: 'input'
+        },
+        {
+          name: 'last',
+          message: 'What is the employees last name?',
+          type: 'input'
+        },
+        {
+          name: 'role',
+          message: 'What is the role id of the employee?',
+          type: 'input' 
+        },
+        {
+          name: 'manager',
+          message: 'What is the employees manager id?',
+          type: 'input'
         }
       ]).then((roleData) => {
-      let input1 = roleData.title;
-      let input2 = roleData.salary;
-      db.query('UPDATE role SET(title, salary) VALUES(?,?)', [input1, input2],(err, results) => {
+      let input1 = roleData.first;
+      let input2 = roleData.last;
+      let input3 = roleData.role;
+      let input4 = roleData.manager;
+      let input5 = roleData.employeeID
+    
+      db.query('UPDATE employee SET first_name = ?, last_name = ?, role_id = ?, manager_id = ? WHERE id = ?', [input1, input2, input3, input4, input5],(err, results) => {
         if(err){
           console.log(err)
         } else {
           console.log('Employee role has successfuly been updated')
+          getAnswers()
         }
       })
     })
@@ -114,6 +132,7 @@ inquirer.prompt(startQuestion)
           console.log(err)
         } else{
           console.table(results)
+          getAnswers()
         }
       })
     }
@@ -127,25 +146,28 @@ inquirer.prompt(startQuestion)
           type: 'input'
         },
         {
-          name: 'departmentId',
-          message: 'What is the department ID for this role?',
-          type: 'input'
-        },
-        {
           name: 'salary',
           message: 'What is the salary for this role ?',
           choices: ['80000', '90000', '100000', '150000', '250000'],
           type: 'list'
-        }
+        },
+        {
+          name: 'departmentId',
+          message: 'What is the department ID for this role?',
+          type: 'input'
+        },
+        
       ]).then((data) => {
         let answer1 = data.role;
-        let answer2 = data.departmentId;
-        let answer3 = data.salary;
-      db.query('INSERT INTO role VALUES(?,?,?) ',[answer1, answer2 , answer3], (err, results) => {
+        let answer2 = data.salary;
+        let answer3 = data.departmentId;
+        
+      db.query('INSERT INTO role(title, salary, department_id) VALUES(?,?,?) ',[answer1, answer2 , answer3], (err, results) => {
         if(err){
           console.log(err)
         } else{
-          console.table(results)
+          console.log('Role succesfully added')
+          getAnswers()
         }
       })
     })
@@ -157,8 +179,38 @@ inquirer.prompt(startQuestion)
           console.log(err)
         }else{
           console.table(results)
+          getAnswers()
         }
       })
     }
+    // add department
+    else if(data.answer === 'Add Departments'){
+      inquirer.prompt([
+        {
+          name: 'dname',
+          message: 'What is the name of the department you would like to add?',
+          type: 'input'
+        }
+      ]).then((data) => {
+      let addedDeparment = data.dname
+      db.query('INSERT INTO department(department_name) VALUES(?)' , [addedDeparment], (err, results) =>{
+        if (err){
+          console.log(err)
+        }else{
+          console.table(results)
+          getAnswers()
+        }
+      })
+    })
+  }
+  // Quit
+  else if (data.answer === 'Quit'){
+    process.exit()
+  }
+  else{
+    return getAnswers()
+  }
     // end of .then
   })
+}
+getAnswers()
